@@ -1,8 +1,8 @@
 class XcodeOffload < Formula
   desc "APFS-backed external storage for Xcode and CoreSimulator"
   homepage "https://github.com/rudironsoni/xcode-offload"
-  url "https://github.com/rudironsoni/xcode-offload/archive/refs/tags/v0.3.1.tar.gz"
-  sha256 "8b9260c0fac3db8e30b884d61ce709b0fe498e82ef56e1a9fce0ee31d130e03b"
+  url "https://github.com/rudironsoni/xcode-offload/archive/refs/tags/v0.3.2.tar.gz"
+  sha256 "9d9e5af55ee5ba6bb6ac8392b32e80fe35188abc51b18326efa752434c847b9f"
   license "MIT"
 
   depends_on xcode: ["16.3", :build]
