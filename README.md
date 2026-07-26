@@ -5,19 +5,19 @@ Homebrew formulae for Rudironsoni tools.
 ## Install
 
 ```sh
-brew install rudironsoni/tap/xcode-offload
+brew install rudironsoni/tap/macos-offload
 ```
 
 Or tap first:
 
 ```sh
 brew tap rudironsoni/tap
-brew install xcode-offload
+brew install macos-offload
 ```
 
 ## Upgrade
 
 ```sh
 brew update
-brew upgrade xcode-offload
+brew upgrade macos-offload
 ```
