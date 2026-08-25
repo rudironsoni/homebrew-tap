@@ -1,11 +1,10 @@
 name: Bump horca cask
 
 # Pull-based cask automation: polls the latest Horca release on
-# rudironsoni/orca-builds and, when the cask is behind, downloads the DMGs,
-# recomputes sha256, updates Casks/horca.rb, runs brew style + audit, and
-# commits with this repository's own GITHUB_TOKEN. No cross-repository write
-# credentials anywhere: orca-builds never pushes here; this repo never writes
-# elsewhere.
+# rudironsoni/orca (v*-horca.* only) and, when the cask is behind, downloads
+# the DMGs, recomputes sha256, updates Casks/horca.rb, runs brew style +
+# audit, and commits with this repository's own GITHUB_TOKEN. No
+# cross-repository write credentials anywhere.
 
 on:
   schedule:
@@ -30,13 +29,16 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          tag=$(gh api repos/rudironsoni/orca-builds/releases/latest --jq .tag_name 2>/dev/null) || {
+          release_json=$(gh api repos/rudironsoni/orca/releases --paginate \
+            --jq '[.[] | select(.draft|not) | select(.tag_name | test("^v[0-9]+\\.[0-9]+\\.[0-9]+-horca\\.[0-9]+$"))] | sort_by(.created_at) | last // empty') || true
+          if [ -z "$release_json" ] || [ "$release_json" = "null" ]; then
             echo "::notice::no Horca release published yet"
             echo "version=" >>"$GITHUB_OUTPUT"
             exit 0
-          }
+          fi
+          tag=$(printf '%s\n' "$release_json" | jq -r .tag_name)
           if ! [[ "$tag" =~ ^v([0-9]+\.[0-9]+\.[0-9]+-horca\.[0-9]+)$ ]]; then
-            echo "::error::latest release tag does not look like a Horca tag: $tag"
+            echo "::error::latest Horca release tag does not look like a Horca tag: $tag"
             exit 1
           fi
           echo "version=${BASH_REMATCH[1]}" >>"$GITHUB_OUTPUT"
@@ -65,7 +67,7 @@ jobs:
           set -euo pipefail
           for arch in arm64 x64; do
             gh release download "v$VERSION" \
-              --repo rudironsoni/orca-builds \
+              --repo rudironsoni/orca \
               --pattern "horca-macos-$arch.dmg" \
               --dir /tmp/horca-bump
           done
