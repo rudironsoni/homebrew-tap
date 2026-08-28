@@ -113,15 +113,17 @@ jobs:
       - name: Commit with remote lease
         if: steps.current.outputs.changed == 'true'
         env:
+          GH_TOKEN: ${{ github.token }}
           CHANNEL: ${{ matrix.channel }}
           VERSION: ${{ steps.release.outputs.version }}
         run: |
+          gh auth setup-git
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           token=horca
           if [ "$CHANNEL" = beta ]; then token='horca@beta'; fi
           git add "Casks/$token.rb"
           git commit -m "chore(horca): update $CHANNEL to $VERSION"
-          remote_main=$(git ls-remote origin refs/heads/main | cut -f1)
+          remote_main=$(gh api repos/$GITHUB_REPOSITORY/git/ref/heads/main --jq .object.sha)
           test "$(git rev-parse HEAD^)" = "$remote_main"
           git push origin HEAD:main
