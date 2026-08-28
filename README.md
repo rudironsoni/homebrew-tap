@@ -44,8 +44,9 @@ brew install --cask rudironsoni/tap/horca@beta
   is the update path (the cask sets no `auto_updates`).
 - Stable updates follow each successful Horca `main` release. Beta updates
   follow releases created with the `Horca: Beta Release` workflow.
-- The tap checks both channels at the start of every hour and can also be run
-  manually. It verifies release checksums and validates the cask before it
-  updates `main`.
+- The Horca Maintenance App requests each channel update as soon as a release
+  is published. The tap also checks both channels at the start of every hour
+  and can be run manually. It verifies release checksums and validates the cask
+  before it updates `main`.
 - `brew zap horca` removes only Horca-owned state; an installed official
   Orca (app, `~/.orca`, Application Support, Keychain, TCC grants) survives.
