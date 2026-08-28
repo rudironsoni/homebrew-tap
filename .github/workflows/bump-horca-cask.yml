@@ -79,6 +79,7 @@ jobs:
         if: steps.current.outputs.changed == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
+          CHANNEL: ${{ matrix.channel }}
           TAG: ${{ steps.release.outputs.tag }}
           SOURCE_SHA: ${{ steps.release.outputs.source_sha }}
         run: |
