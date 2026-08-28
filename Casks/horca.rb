@@ -1,16 +1,13 @@
-# Horca — personal downstream distribution of Orca, installable side by
-# side with the official Orca app (distinct app name, bundle id, protocol,
-# CLI, and state root; see rudironsoni/orca docs/reference/horca-distribution.md).
 cask "horca" do
   arch arm: "arm64", intel: "x64"
 
-  version "1.4.178-horca.1"
-  sha256 arm:   "9ce7f01743ef39bec28d3fe2bd5088fb82285f04082e6e987a557913ab9188b0",
-         intel: "6d81181bfbb99f51f91c64329c3df871539fb68cddf6bc5f967337f6e472d0bc"
+  version "1.4.178-horca.9"
+  sha256 arm:   "32b6493c49e8ac8c66452bad3c7cb97b47f2e6e32f8c5e8507cc231e88c6ff0c",
+         intel: "e98e28b4af4bc1e750d9ff0e3d8017e937579df32c8b996ab2bc1b104838dff3"
 
   url "https://github.com/rudironsoni/orca/releases/download/v#{version}/horca-macos-#{arch}.dmg"
   name "Horca"
-  desc "Personal downstream distribution of the Orca agent workbench"
+  desc "Downstream Orca distribution with additional integrations"
   homepage "https://github.com/rudironsoni/orca"
 
   livecheck do
@@ -19,17 +16,12 @@ cask "horca" do
     strategy :github_latest
   end
 
-  # No auto_updates: Horca's in-app updater is intentionally disabled; this
-  # cask (or a GitHub Releases download) is the only update path.
-
-  depends_on macos: ">= :big_sur"
+  conflicts_with cask: "horca@beta"
+  depends_on macos: :monterey
 
   app "Horca.app"
   binary "#{appdir}/Horca.app/Contents/Resources/bin/horca"
 
-  # Zap removes ONLY Horca-owned state, keyed on the Horca bundle id and
-  # product name. Official Orca's app, ~/.orca, Application Support/Orca,
-  # Keychain items, caches, preferences, and TCC grants must survive a zap.
   zap trash: [
     "~/.horca",
     "~/Library/Application Support/Horca",
