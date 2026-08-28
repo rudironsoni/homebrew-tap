@@ -141,7 +141,7 @@ function render(manifestPath) {
   homepage "https://github.com/rudironsoni/orca"
 ${livecheck}
   conflicts_with cask: "${conflict}"
-  depends_on macos: :big_sur
+  depends_on macos: :monterey
 
   app "Horca.app"
   binary "#{appdir}/Horca.app/Contents/Resources/bin/horca"
