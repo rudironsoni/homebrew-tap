@@ -1,108 +1,126 @@
-name: Bump horca cask
-
-# Pull-based cask automation: polls the latest Horca release on
-# rudironsoni/orca (v*-horca.* only) and, when the cask is behind, downloads
-# the DMGs, recomputes sha256, updates Casks/horca.rb, runs brew style +
-# audit, and commits with this repository's own GITHUB_TOKEN. No
-# cross-repository write credentials anywhere.
+name: Update Horca channels
 
 on:
+  repository_dispatch:
+    types: [horca-release-published]
   schedule:
-    - cron: '43 */6 * * *'
+    - cron: '0 * * * *'
   workflow_dispatch:
+    inputs:
+      channel:
+        description: Channel to reconcile
+        required: true
+        type: choice
+        options: [stable, beta, all]
 
 permissions:
   contents: write
 
+concurrency:
+  group: horca-channel-update
+  cancel-in-progress: false
+
 jobs:
-  bump:
-    # macOS runner: brew style/audit need a working Homebrew.
-    runs-on: macos-latest
-    timeout-minutes: 20
+  channels:
+    if: github.repository == 'rudironsoni/homebrew-tap'
+    runs-on: macos-15
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        channel: [stable, beta]
     steps:
-      - name: Checkout tap
-        uses: actions/checkout@v6
-
-      - name: Read latest Horca release
-        id: latest
+      - name: Select requested channels
+        id: requested
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CHANNEL: ${{ matrix.channel }}
+          EVENT_NAME: ${{ github.event_name }}
+          DISPATCH_CHANNEL: ${{ github.event.client_payload.channel }}
+          MANUAL_CHANNEL: ${{ inputs.channel }}
         run: |
-          set -euo pipefail
-          release_json=$(gh api repos/rudironsoni/orca/releases --paginate \
-            --jq '[.[] | select(.draft|not) | select(.tag_name | test("^v[0-9]+\\.[0-9]+\\.[0-9]+-horca\\.[0-9]+$"))] | sort_by(.created_at) | last // empty') || true
-          if [ -z "$release_json" ] || [ "$release_json" = "null" ]; then
-            echo "::notice::no Horca release published yet"
-            echo "version=" >>"$GITHUB_OUTPUT"
-            exit 0
-          fi
-          tag=$(printf '%s\n' "$release_json" | jq -r .tag_name)
-          if ! [[ "$tag" =~ ^v([0-9]+\.[0-9]+\.[0-9]+-horca\.[0-9]+)$ ]]; then
-            echo "::error::latest Horca release tag does not look like a Horca tag: $tag"
-            exit 1
-          fi
-          echo "version=${BASH_REMATCH[1]}" >>"$GITHUB_OUTPUT"
+          selected=true
+          if [ "$EVENT_NAME" = repository_dispatch ] && [ "$DISPATCH_CHANNEL" != "$CHANNEL" ]; then selected=false; fi
+          if [ "$EVENT_NAME" = workflow_dispatch ] && [ "$MANUAL_CHANNEL" != all ] && [ "$MANUAL_CHANNEL" != "$CHANNEL" ]; then selected=false; fi
+          echo "selected=$selected" >> "$GITHUB_OUTPUT"
 
-      - name: Compare with the cask
-        id: compare
-        if: steps.latest.outputs.version != ''
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        if: steps.requested.outputs.selected == 'true'
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - id: homebrew
+        if: steps.requested.outputs.selected == 'true'
+        uses: Homebrew/actions/setup-homebrew@3cdb78d0f62ad29dd32de765782654f4eedea607
+        with:
+          core: false
+          cask: false
+
+      - name: Select newest release by version
+        id: release
+        if: steps.requested.outputs.selected == 'true'
         env:
-          VERSION: ${{ steps.latest.outputs.version }}
-        run: |
-          set -euo pipefail
-          current=$(sed -n 's/^  version "\(.*\)".*$/\1/p' Casks/horca.rb | head -1)
-          echo "cask version: $current, latest release: $VERSION"
-          if [ "$current" = "$VERSION" ]; then
-            echo "changed=false" >>"$GITHUB_OUTPUT"
-          else
-            echo "changed=true" >>"$GITHUB_OUTPUT"
-          fi
+          GH_TOKEN: ${{ github.token }}
+          CHANNEL: ${{ matrix.channel }}
+          REQUESTED_TAG: ${{ github.event_name == 'repository_dispatch' && github.event.client_payload.tag || '' }}
+          REQUESTED_SHA: ${{ github.event_name == 'repository_dispatch' && github.event.client_payload.source_sha || '' }}
+        run: node scripts/update-horca-channel.mjs select
 
-      - name: Update cask
-        if: steps.compare.outputs.changed == 'true'
+      - name: Compare current cask
+        id: current
+        if: steps.release.outputs.found == 'true'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VERSION: ${{ steps.latest.outputs.version }}
-        run: |
-          set -euo pipefail
-          for arch in arm64 x64; do
-            gh release download "v$VERSION" \
-              --repo rudironsoni/orca \
-              --pattern "horca-macos-$arch.dmg" \
-              --dir /tmp/horca-bump
-          done
-          sha_arm64=$(shasum -a 256 /tmp/horca-bump/horca-macos-arm64.dmg | cut -d' ' -f1)
-          sha_x64=$(shasum -a 256 /tmp/horca-bump/horca-macos-x64.dmg | cut -d' ' -f1)
+          CHANNEL: ${{ matrix.channel }}
+          VERSION: ${{ steps.release.outputs.version }}
+        run: node scripts/update-horca-channel.mjs compare
 
-          # Replace version and the two sha256 values (arm line, then intel line).
-          sed -i '' \
-            -e "s|^  version \".*$|  version \"$VERSION\"|" \
-            -e "s|^  sha256 arm:   \".*\",$|  sha256 arm:   \"$sha_arm64\",|" \
-            -e "s|^         intel: \".*\"$|         intel: \"$sha_x64\"|" \
-            Casks/horca.rb
-
-          grep -q "version \"$VERSION\"" Casks/horca.rb
-          grep -q "$sha_arm64" Casks/horca.rb
-          grep -q "$sha_x64" Casks/horca.rb
-
-      - name: Style and audit
-        if: steps.compare.outputs.changed == 'true'
-        run: |
-          set -euo pipefail
-          brew style --cask "$PWD/Casks/horca.rb"
-          brew audit --cask "$PWD/Casks/horca.rb" || {
-            echo "::warning::brew audit reported issues; review before relying on this bump"
-            exit 1
-          }
-
-      - name: Commit and push
-        if: steps.compare.outputs.changed == 'true'
+      - name: Download and verify release assets
+        if: steps.current.outputs.changed == 'true'
         env:
-          VERSION: ${{ steps.latest.outputs.version }}
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.release.outputs.tag }}
+          SOURCE_SHA: ${{ steps.release.outputs.source_sha }}
         run: |
-          set -euo pipefail
+          mkdir -p artifacts
+          gh release download "$TAG" --repo rudironsoni/orca --dir artifacts
+          node scripts/update-horca-channel.mjs verify artifacts/horca-release.json artifacts
+
+      - name: Render cask
+        if: steps.current.outputs.changed == 'true'
+        env:
+          CHANNEL: ${{ matrix.channel }}
+        run: node scripts/update-horca-channel.mjs render artifacts/horca-release.json
+
+      - name: Validate tap
+        if: steps.current.outputs.changed == 'true'
+        env:
+          HOMEBREW_GITHUB_API_TOKEN: ${{ github.token }}
+          TAP_NAME: ${{ steps.homebrew.outputs.tap-name }}
+          CHANNEL: ${{ matrix.channel }}
+        run: |
+          token=horca
+          if [ "$CHANNEL" = beta ]; then token='horca@beta'; fi
+          brew readall "$TAP_NAME"
+          brew style --cask "$TAP_NAME/$token"
+          brew audit --cask --online "$TAP_NAME/$token"
+          brew install --cask "$TAP_NAME/$token"
+          codesign --verify --deep --strict '/Applications/Horca.app'
+          spctl --assess --type execute '/Applications/Horca.app'
+          brew uninstall --cask "$TAP_NAME/$token"
+
+      - name: Commit with remote lease
+        if: steps.current.outputs.changed == 'true'
+        env:
+          CHANNEL: ${{ matrix.channel }}
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
           git config user.name 'github-actions[bot]'
-          git config user.email 'github-actions[bot]@users.noreply.github.com'
-          git add Casks/horca.rb
-          git commit -m "horca $VERSION"
-          git push
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          token=horca
+          if [ "$CHANNEL" = beta ]; then token='horca@beta'; fi
+          git add "Casks/$token.rb"
+          git commit -m "chore(horca): update $CHANNEL to $VERSION"
+          remote_main=$(git ls-remote origin refs/heads/main | cut -f1)
+          test "$(git rev-parse HEAD^)" = "$remote_main"
+          git push origin HEAD:main
