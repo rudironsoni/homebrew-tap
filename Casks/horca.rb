@@ -1,9 +1,9 @@
 cask "horca" do
   arch arm: "arm64", intel: "x64"
 
-  version "1.4.197-horca.21"
-  sha256 arm:   "743f1b420a574b4e8e8d8c2857ca8435742e8e608967ae3ceffa0c097a5f78e4",
-         intel: "3f825257de7fc503c8cb82c1497af424b48ab516fa375941973b5721f5ecf35b"
+  version "1.4.197-horca.22"
+  sha256 arm:   "a4b5418cb4501a831949731e6acf4fd7461e4fa1af68e47349d9801ddef7f0be",
+         intel: "3ad6ccf37e571332afc1411a02656cd7f2239f5323bd1dff64ebdfbff1942839"
 
   url "https://github.com/rudironsoni/orca/releases/download/v#{version}/horca-macos-#{arch}.dmg"
   name "Horca"
