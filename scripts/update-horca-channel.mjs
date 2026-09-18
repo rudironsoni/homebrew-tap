@@ -38,7 +38,7 @@ async function github(path) {
 }
 
 async function select() {
-  const releases = await github('/repos/rudironsoni/orca/releases?per_page=100')
+  const releases = await github('/repos/rudironsoni/horca/releases?per_page=100')
   const requestedTag = process.env.REQUESTED_TAG
   const candidates = releases.filter((release) => {
     if (release.draft || release.prerelease !== (channel === 'beta')) return false
@@ -52,9 +52,9 @@ async function select() {
     output('found', 'false')
     return
   }
-  const ref = await github(`/repos/rudironsoni/orca/git/ref/tags/${encodeURIComponent(release.tag_name)}`)
+  const ref = await github(`/repos/rudironsoni/horca/git/ref/tags/${encodeURIComponent(release.tag_name)}`)
   let target = ref.object
-  if (target.type === 'tag') target = await github(`/repos/rudironsoni/orca/git/tags/${target.sha}`)
+  if (target.type === 'tag') target = await github(`/repos/rudironsoni/horca/git/tags/${target.sha}`)
   const sourceSha = target.object?.sha ?? target.sha
   if (!/^[a-f0-9]{40}$/.test(sourceSha)) throw new Error(`Invalid source SHA for ${release.tag_name}`)
   if (process.env.REQUESTED_SHA && sourceSha !== process.env.REQUESTED_SHA) {
@@ -135,10 +135,10 @@ function render(manifestPath) {
   sha256 arm:   "${arm.sha256}",
          intel: "${intel.sha256}"
 
-  url "https://github.com/rudironsoni/orca/releases/download/v#{version}/horca-macos-#{arch}.dmg"
+  url "https://github.com/rudironsoni/horca/releases/download/v#{version}/horca-macos-#{arch}.dmg"
   name "Horca"
   desc "Downstream Orca distribution with additional integrations"
-  homepage "https://github.com/rudironsoni/orca"
+  homepage "https://github.com/rudironsoni/horca"
 ${livecheck}
   conflicts_with cask: "${conflict}"
   depends_on macos: :monterey

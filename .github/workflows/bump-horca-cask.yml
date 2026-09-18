@@ -84,7 +84,7 @@ jobs:
           SOURCE_SHA: ${{ steps.release.outputs.source_sha }}
         run: |
           mkdir -p artifacts
-          gh release download "$TAG" --repo rudironsoni/orca --dir artifacts
+          gh release download "$TAG" --repo rudironsoni/horca --dir artifacts
           node scripts/update-horca-channel.mjs verify artifacts/horca-release.json artifacts
 
       - name: Render cask
