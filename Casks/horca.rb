@@ -1,14 +1,14 @@
 cask "horca" do
   arch arm: "arm64", intel: "x64"
 
-  version "1.4.203-horca.1"
-  sha256 arm:   "af4a3c11ee3fbe6471af8d4b816bc95bb2d08cceb6ab013b75144a66db3477f5",
-         intel: "18cbb0bcb43161983591518e3ec5d08fd63df7e02d686d4d16ea6b7a12b9fc5f"
+  version "1.4.205-horca.1"
+  sha256 arm:   "307af57dec16fc01813447011974e82b22f77a65818d89652c43708b956025f8",
+         intel: "8f793e74fa0f8a8f4f371657c60fe3e979ba31210f3377583ae2774bfabf63f8"
 
-  url "https://github.com/rudironsoni/orca/releases/download/v#{version}/horca-macos-#{arch}.dmg"
+  url "https://github.com/rudironsoni/horca/releases/download/v#{version}/horca-macos-#{arch}.dmg"
   name "Horca"
   desc "Downstream Orca distribution with additional integrations"
-  homepage "https://github.com/rudironsoni/orca"
+  homepage "https://github.com/rudironsoni/horca"
 
   livecheck do
     url :url
