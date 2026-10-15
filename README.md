@@ -21,32 +21,3 @@ brew install macos-offload
 brew update
 brew upgrade macos-offload
 ```
-
-## Horca
-
-Personal downstream distribution of [Orca](https://github.com/stablyai/orca),
-built and released from [rudironsoni/orca](https://github.com/rudironsoni/orca).
-Installs side by side with official Orca — distinct app (`Horca.app`),
-bundle id (`com.rudironsoni.horca`), URL protocol (`horca:`), CLI
-(`horca`), and state root (`~/.horca`).
-
-```sh
-brew install --cask rudironsoni/tap/horca
-```
-
-Install the newest beta:
-
-```sh
-brew install --cask rudironsoni/tap/horca@beta
-```
-
-- Horca's in-app updater is intentionally disabled; `brew upgrade --cask horca`
-  is the update path (the cask sets no `auto_updates`).
-- Stable updates follow each successful Horca `main` release. Beta updates
-  follow releases created with the `Horca: Beta Release` workflow.
-- The Horca Maintenance App requests each channel update as soon as a release
-  is published. The tap also checks both channels at the start of every hour
-  and can be run manually. It verifies release checksums and validates the cask
-  before it updates `main`.
-- `brew zap horca` removes only Horca-owned state; an installed official
-  Orca (app, `~/.orca`, Application Support, Keychain, TCC grants) survives.
